@@ -92,6 +92,6 @@ Ensure the core matching engine logic remains sound:
 pytest tests/
 ```
 
-## 👨‍💻 Author
+## 👩‍💻 Author
 **Shraddha Keshari**
 - [GitHub Profile](https://github.com/shraddha-keshari)
