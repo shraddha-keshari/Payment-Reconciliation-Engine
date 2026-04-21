@@ -1,172 +1,89 @@
 # 🏦 Payment Reconciliation Engine
 
-A **three-way payment reconciliation engine** built in Python that automatically matches transactions across an internal ledger, payment gateway (Razorpay/Stripe), and bank statement — identifying discrepancies like missing payments, amount mismatches, and duplicates.
+![Python](https://img.shields.io/badge/Python-3.13-blue.svg)
+![Polars](https://img.shields.io/badge/Polars-Fast%20DataFrames-orange.svg)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red.svg)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-lightgrey.svg)
+![Pytest](https://img.shields.io/badge/Pytest-Testing-yellow.svg)
 
----
+A professional-grade data engineering pipeline designed to automate the three-way reconciliation of financial transactions. This engine ensures that records from an **Internal Application Ledger** perfectly match the transactions processed by a **Payment Gateway** (e.g., Stripe, Razorpay) and the settlements deposited into the **Bank Statement**.
 
-## 🎯 What Problem Does This Solve?
+## 📖 About the Project
 
-When a company processes payments, the same transaction appears in **3 different systems**:
-1. **Your app's database** (internal ledger)
-2. **Payment gateway** (Razorpay, Stripe, etc.)
-3. **Bank statement** (actual money movement)
+In the FinTech and e-commerce industry, ensuring financial integrity is critical. Dropped webhooks, manual refunds, currency fluctuations, and gateway outages can cause discrepancies where the company thinks it received money, but the bank never settled it. 
 
-These records often **don't match perfectly** due to:
-- Settlement delays (T+1 to T+3 days)
-- Gateway fees being deducted
-- Missing webhooks or failed logging
-- Duplicate entries from retry logic
-- Different ID formats across systems
+This engine automates the tedious process of finding these discrepancies. It ingests thousands of records, applies multi-stage matching algorithms (including fuzzy matching for typos), classifies exactly why a transaction failed to match, persists the results, and generates actionable analytics.
 
-**Reconciliation** is the process of matching these records and flagging discrepancies. Every fintech company (Razorpay, CRED, PhonePe) does this daily for millions of transactions.
+### Key Features
+- **High-Performance Ingestion:** Utilizes `Polars` to load and process CSV files up to 50x faster than traditional Pandas.
+- **Strict Data Validation:** Employs `Pydantic` and `Pandera` to ensure incoming data meets financial schema constraints (e.g., non-negative amounts, valid dates, correct enums).
+- **Multi-Stage Matching Pipeline:**
+  1. **Exact Matching:** High-confidence outer joins on transaction references.
+  2. **Fuzzy Matching:** Utilizes `RapidFuzz` (Levenshtein distance) to catch human typos or truncated reference IDs (e.g., `GW-REF-1234` vs `GW-REF-123X`).
+  3. **Bank Statement Integration:** Links successfully matched transactions to final bank settlement UTR numbers.
+- **Discrepancy Classification:** Automatically categorizes errors into actionable buckets (`MISSING_IN_GATEWAY`, `MISSING_IN_LEDGER`, `AMOUNT_MISMATCH`, `DUPLICATE`) with severity levels.
+- **Persistence Layer:** Uses `SQLAlchemy` ORM and the Repository pattern to save historical reconciliation runs into a SQLite database.
+- **Analytics & Reporting:**
+  - An interactive **Streamlit** dashboard for visualizing match rates and exploring discrepancies.
+  - Automated HTML report generation using **Jinja2**.
 
----
+## 🛠️ Architecture & Implementation
 
-## ⚙️ How It Works
+The repository is modularized following best practices for production data applications:
 
-```
-                    ┌──────────────────┐
-                    │   CSV Data Files  │
-                    │  (3 sources)      │
-                    └────────┬─────────┘
-                             │
-                    ┌────────▼─────────┐
-                    │  Data Ingestion   │
-                    │  (Polars + Pandera)│
-                    └────────┬─────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-     ┌────────▼───┐  ┌──────▼─────┐  ┌────▼────────┐
-     │ Exact Match │  │ Fuzzy Match │  │ Rule-Based  │
-     │ (Polars     │  │ (RapidFuzz) │  │ Match       │
-     │  Joins)     │  │             │  │ (Fee logic) │
-     └────────┬───┘  └──────┬─────┘  └────┬────────┘
-              │              │              │
-              └──────────────┼──────────────┘
-                             │
-                    ┌────────▼─────────┐
-                    │  Classification   │
-                    │  (Discrepancy     │
-                    │   types)          │
-                    └────────┬─────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-     ┌────────▼───┐  ┌──────▼─────┐  ┌────▼────────┐
-     │  SQLite DB  │  │ HTML Report │  │  Streamlit  │
-     │ (SQLAlchemy)│  │  (Jinja2)   │  │  Dashboard  │
-     └────────────┘  └────────────┘  └─────────────┘
+```text
+├── data/                  # Sample CSVs (Ledger, Gateway, Bank)
+├── output/                # Generated Jinja2 HTML reports
+├── scripts/               # Utility scripts (e.g., test data generation)
+├── src/
+│   ├── config.py          # Global thresholds and configurations
+│   ├── ingestion/         # Polars loaders and data validators
+│   ├── engine/            # The core matching, rules, and classification logic
+│   ├── models/            # SQLAlchemy database models and Pydantic schemas
+│   ├── persistence/       # DB connection managers and CRUD repositories
+│   └── reporting/         # HTML report generators and Jinja templates
+├── tests/                 # Pytest suite for the matching engine
+├── dashboard.py           # Streamlit analytics application
+└── main.py                # The central pipeline orchestrator
 ```
 
-### Matching Pipeline:
-1. **Exact Match** — Join records by transaction ID → catches ~80% of matches
-2. **Fuzzy Match** — Use RapidFuzz to find similar reference numbers → catches ~10%
-3. **Rule-Based Match** — Apply business rules (e.g., `amount - fee = bank_credit`) → catches ~5%
-4. **Classify Remainder** — Everything unmatched is classified as a discrepancy
+## 🚀 How to Run
 
----
-
-## 🛠️ Tech Stack
-
-| Technology | Purpose |
-|-----------|---------|
-| **Python 3.11+** | Core language |
-| **Polars** | High-performance DataFrame processing |
-| **Pydantic** | Data validation for individual records |
-| **Pandera** | DataFrame-level schema validation |
-| **RapidFuzz** | Fuzzy string matching for reference IDs |
-| **SQLAlchemy** | ORM for database operations |
-| **SQLite** | Lightweight relational database |
-| **Jinja2** | HTML report generation |
-| **Streamlit** | Interactive dashboard |
-| **Pytest** | Unit testing framework |
-
----
-
-## 🚀 Quick Start
-
-### 1. Clone & Setup
+### 1. Setup Environment
+Clone the repository and install the dependencies:
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd Payment_Reconciliation_Project
-
-# Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Mac/Linux
-
-# Install dependencies
+git clone https://github.com/shraddha-keshari/Payment-Reconciliation-Engine.git
+cd Payment-Reconciliation-Engine
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ### 2. Generate Sample Data
+Create a fresh set of sample data with intentional, randomized discrepancies:
 ```bash
 python scripts/generate_sample_data.py
 ```
-This creates realistic test data in `data/` with intentional mismatches.
 
-### 3. Run Reconciliation
+### 3. Run the Reconciliation Pipeline
+Execute the end-to-end data pipeline to validate, match, and save results:
 ```bash
 python main.py
 ```
 
-### 4. View Results
-- **HTML Report:** Open `output/reconciliation_report.html` in your browser
-- **Streamlit Dashboard:** `streamlit run dashboard.py`
-
----
-
-## 📊 Sample Output
-
-The engine produces:
-- **Match Rate:** Percentage of transactions matched across all 3 sources
-- **Discrepancy Report:** Categorized list of mismatches
-- **Summary Statistics:** Total processed, matched, mismatched, missing
-- **Audit Trail:** Timestamped log of every reconciliation run
-
----
-
-## 📁 Project Structure
-
+### 4. Launch the Interactive Dashboard
+Spin up the Streamlit analytics interface to visualize the results:
+```bash
+streamlit run dashboard.py
 ```
-Payment_Reconciliation_Project/
-├── main.py                    # Entry point — run the pipeline
-├── dashboard.py               # Streamlit dashboard
-├── requirements.txt           # Python dependencies
-├── data/                      # Input CSV files
-├── src/
-│   ├── config.py              # Settings & constants
-│   ├── models/
-│   │   ├── schemas.py         # Pydantic data models
-│   │   └── database.py        # SQLAlchemy ORM models
-│   ├── ingestion/
-│   │   ├── loader.py          # CSV loading (Polars)
-│   │   └── validator.py       # Data validation (Pandera)
-│   ├── engine/
-│   │   ├── matcher.py         # Exact + fuzzy matching
-│   │   ├── rules.py           # Rule-based matching
-│   │   └── classifier.py      # Discrepancy classification
-│   ├── persistence/
-│   │   ├── db_manager.py      # Database connection
-│   │   └── repository.py      # CRUD operations
-│   └── reporting/
-│       ├── report_generator.py # HTML report builder
-│       └── templates/         # Jinja2 templates
-├── scripts/
-│   └── generate_sample_data.py
-├── tests/                     # Unit tests
-└── output/                    # Generated reports
+*The dashboard will be available at `http://localhost:8501`*
+
+### 5. Run the Test Suite
+Ensure the core matching engine logic remains sound:
+```bash
+pytest tests/
 ```
 
----
-
-## 📝 License
-
-This project is for educational and portfolio purposes.
-
----
-
-## 👤 Author
-
-**Your Name** — [Your LinkedIn](https://linkedin.com/in/yourprofile) | [Your GitHub](https://github.com/yourusername)
+## 👨‍💻 Author
+**Shraddha Keshari**
+- [GitHub Profile](https://github.com/shraddha-keshari)
