@@ -1,0 +1,56 @@
+# ============================================================
+# pyproject.toml — Modern Python Project Configuration
+#
+# WHAT IS THIS?
+# This is the modern way to configure a Python project. It
+# replaces older files like setup.py and setup.cfg.
+#
+# WHY DO WE NEED IT?
+# 1. It tells Python tools (pip, pytest, etc.) about your project
+# 2. It configures how tests run
+# 3. It provides metadata (name, version, author) that shows
+#    up if you ever publish this package
+# ============================================================
+
+[build-system]
+# This tells pip which tool to use when building/installing your project.
+# setuptools is the default build system for Python.
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+# Basic metadata about your project.
+# This is what shows up on PyPI if you ever publish it.
+name = "payment-reconciliation-engine"
+version = "1.0.0"
+description = "A three-way payment reconciliation engine that matches internal ledger, payment gateway, and bank statement records."
+readme = "README.md"
+requires-python = ">=3.11"
+
+# Author information — PUT YOUR REAL NAME AND EMAIL HERE
+authors = [
+    { name = "Your Name", email = "your.email@example.com" },
+]
+
+# Keywords help people find your project on PyPI
+keywords = ["payment", "reconciliation", "fintech", "matching"]
+
+# Classifiers categorize your project on PyPI
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Office/Business :: Financial",
+]
+
+[tool.pytest.ini_options]
+# Configure pytest — our testing framework.
+# testpaths: tells pytest where to look for test files
+# pythonpath: tells pytest where to find our source code
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+# This tells setuptools to automatically find all Python packages
+# in our project. A "package" is any folder with an __init__.py file.
+where = ["."]

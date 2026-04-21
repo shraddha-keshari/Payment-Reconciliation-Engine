@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<!-- Reconciliation Report Template - Rendered by Jinja2 -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconciliation Report — {{ run_date }}</title>
+    <style>
+        /* --- CSS Reset & Base Styles --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        /* --- Header --- */
+        .header {
+            text-align: center;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 16px;
+            border: 1px solid #475569;
+        }
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .header .subtitle {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        /* --- Summary Cards --- */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #334155;
+            transition: transform 0.2s;
+        }
+        .card:hover { transform: translateY(-2px); }
+        .card .label { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card .value { font-size: 2rem; font-weight: 700; margin-top: 0.25rem; }
+        .card .value.green { color: #4ade80; }
+        .card .value.red { color: #f87171; }
+        .card .value.blue { color: #60a5fa; }
+        .card .value.yellow { color: #facc15; }
+        .card .value.purple { color: #a78bfa; }
+
+        /* --- Match Rate Bar --- */
+        .match-rate-bar {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #334155;
+        }
+        .match-rate-bar h3 { margin-bottom: 0.75rem; color: #94a3b8; }
+        .progress-track {
+            background: #334155;
+            border-radius: 999px;
+            height: 28px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #0f172a;
+            transition: width 0.5s ease;
+        }
+
+        /* --- Section Titles --- */
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #334155;
+        }
+
+        /* --- Tables --- */
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th {
+            background: #1e293b;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.75rem;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 0.65rem 1rem;
+            border-top: 1px solid #1e293b;
+        }
+        tr:nth-child(even) { background: #1e293b40; }
+        tr:hover { background: #334155; }
+
+        /* --- Severity Badges --- */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge.high { background: #7f1d1d; color: #fca5a5; }
+        .badge.medium { background: #78350f; color: #fcd34d; }
+        .badge.low { background: #14532d; color: #86efac; }
+
+        /* --- Match Type Badges --- */
+        .match-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .match-badge.exact { background: #14532d; color: #86efac; }
+        .match-badge.fuzzy { background: #1e3a5f; color: #93c5fd; }
+        .match-badge.rule { background: #3b0764; color: #d8b4fe; }
+
+        /* --- Matching Breakdown Chart --- */
+        .breakdown {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .breakdown-item {
+            flex: 1;
+            min-width: 180px;
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid #334155;
+            text-align: center;
+        }
+        .breakdown-item .dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        /* --- Footer --- */
+        .footer {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #334155;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============ HEADER ============ -->
+    <div class="header">
+        <h1>🏦 Payment Reconciliation Report</h1>
+        <p class="subtitle">
+            Generated on {{ run_date }} | Covering {{ total_ledger }} ledger •
+            {{ total_gateway }} gateway • {{ total_bank }} bank records
+        </p>
+    </div>
+
+    <!-- ============ SUMMARY CARDS ============ -->
+    <div class="cards-grid">
+        <div class="card">
+            <div class="label">Total Matched</div>
+            <div class="value green">{{ total_matched }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Discrepancies</div>
+            <div class="value red">{{ total_discrepancies }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Match Rate</div>
+            <div class="value blue">{{ match_rate }}%</div>
+        </div>
+        <div class="card">
+            <div class="label">Exact Matches</div>
+            <div class="value green">{{ exact_matches }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Fuzzy Matches</div>
+            <div class="value purple">{{ fuzzy_matches }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Rule-Based</div>
+            <div class="value yellow">{{ rule_based_matches }}</div>
+        </div>
+    </div>
+
+    <!-- ============ MATCH RATE BAR ============ -->
+    <div class="match-rate-bar">
+        <h3>Overall Match Rate</h3>
+        <div class="progress-track">
+            <div class="progress-fill" style="width: {{ match_rate }}%; background: {{ match_rate_color }};">
+                {{ match_rate }}%
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MATCHING BREAKDOWN ============ -->
+    <h2 class="section-title">📊 Matching Breakdown</h2>
+    <div class="breakdown">
+        <div class="breakdown-item">
+            <div><span class="dot" style="background: #4ade80;"></span>Exact Match</div>
+            <div class="value green" style="font-size:1.5rem; margin-top:0.5rem;">{{ exact_matches }}</div>
+        </div>
+        <div class="breakdown-item">
+            <div><span class="dot" style="background: #a78bfa;"></span>Fuzzy Match</div>
+            <div class="value purple" style="font-size:1.5rem; margin-top:0.5rem;">{{ fuzzy_matches }}</div>
+        </div>
+        <div class="breakdown-item">
+            <div><span class="dot" style="background: #facc15;"></span>Rule-Based</div>
+            <div class="value yellow" style="font-size:1.5rem; margin-top:0.5rem;">{{ rule_based_matches }}</div>
+        </div>
+        <div class="breakdown-item">
+            <div><span class="dot" style="background: #f87171;"></span>Unmatched</div>
+            <div class="value red" style="font-size:1.5rem; margin-top:0.5rem;">{{ total_discrepancies }}</div>
+        </div>
+    </div>
+
+    <!-- ============ DISCREPANCY SUMMARY ============ -->
+    <h2 class="section-title">⚠️ Discrepancy Summary</h2>
+    <div class="cards-grid">
+        <div class="card">
+            <div class="label">Missing in Gateway</div>
+            <div class="value red">{{ missing_in_gateway }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Missing in Ledger</div>
+            <div class="value red">{{ missing_in_ledger }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Amount Mismatches</div>
+            <div class="value yellow">{{ amount_mismatches }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Duplicates</div>
+            <div class="value yellow">{{ duplicates_found }}</div>
+        </div>
+    </div>
+
+    <!-- ============ DISCREPANCY TABLE ============ -->
+    {% if discrepancy_rows %}
+    <h2 class="section-title">🔍 Discrepancy Details (Top 100)</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Order ID</th>
+                    <th>Gateway Ref</th>
+                    <th>Expected</th>
+                    <th>Actual</th>
+                    <th>Difference</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in discrepancy_rows[:100] %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ row.type }}</td>
+                    <td>
+                        <span class="badge {{ row.severity_class }}">{{ row.severity }}</span>
+                    </td>
+                    <td>{{ row.order_id_display }}</td>
+                    <td>{{ row.gateway_ref_display }}</td>
+                    <td>{{ row.expected_display }}</td>
+                    <td>{{ row.actual_display }}</td>
+                    <td>{{ row.difference_display }}</td>
+                    <td style="max-width:300px; font-size:0.8rem;">{{ row.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- ============ FOOTER ============ -->
+    <div class="footer">
+        <p>Payment Reconciliation Engine v1.0 | Report generated automatically</p>
+        <p>This report is for internal use only.</p>
+    </div>
+
+</body>
+</html>
