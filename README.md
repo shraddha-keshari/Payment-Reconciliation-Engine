@@ -1,3 +1,4 @@
+<img width="1196" height="352" alt="Screenshot 2026-04-21 at 15 58 38" src="https://github.com/user-attachments/assets/c3fa314f-07a1-4079-af83-fbe091068171" />
 # 🏦 Payment Reconciliation Engine
 
 ![Python](https://img.shields.io/badge/Python-3.13-blue.svg)
